@@ -53,4 +53,14 @@ class SwellRejectionImpl extends Error {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).SwellRejection = SwellRejectionImpl;
 
+// Unit tests must never reach a real API. Tests that need Mollie stub fetch themselves.
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: unknown) => {
+      throw new Error(`Unexpected network call in a unit test: ${String(input)}`);
+    }),
+  );
+});
+
 export {};

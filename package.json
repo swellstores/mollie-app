@@ -1,16 +1,19 @@
 {
   "description": "Accept iDEAL, Bancontact, cards, Klarna and more through Mollie",
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "~0.12.21",
     "@swell/app-types": "^1.2.0",
     "typescript": "^5.9.3",
-    "@cloudflare/vitest-pool-workers": "~0.12.21",
     "vitest": "3.2.x"
   },
   "name": "mollie",
   "private": true,
   "scripts": {
-    "typecheck": "([ -z \"$(find functions -name '*.ts' 2>/dev/null | head -1)\" ] || tsc --noEmit) && ([ ! -f test/tsconfig.json ] || tsc --build --noEmit test) && ([ ! -f frontend/tsconfig.json ] || tsc --build --noEmit frontend)",
+    "typecheck": "([ -z \"$(find functions -name '*.ts' 2>/dev/null | head -1)\" ] || tsc --noEmit) && ([ ! -f test/tsconfig.json ] || tsc --build --noEmit test) && tsc -p components",
     "test": "vitest run"
   },
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "dependencies": {
+    "preact": "^10.29.8"
+  }
 }

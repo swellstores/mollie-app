@@ -14,8 +14,8 @@
       "id": "payment_description",
       "label": "Payment description",
       "type": "short_text",
-      "placeholder": "Order from {store}",
-      "description": "Shown to shoppers on Mollie's payment page and their bank statement. {store} is replaced with your store name. Up to 255 characters."
+      "placeholder": "Order at yourstore.com",
+      "description": "Shown to shoppers on Mollie's payment page and their bank statement, for example your store name. Leave empty to use \"Order at\" and your store's web address. Up to 255 characters."
     }
   ]
 }
