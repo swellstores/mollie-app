@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.swell.store/setting.json",
+  "label": "Mollie",
+  "description": "Connect your Mollie account. Shoppers choose a payment method on Mollie's payment page; turn methods on or off in your Mollie dashboard.",
+  "fields": [
+    {
+      "id": "api_key",
+      "label": "API key",
+      "type": "short_text",
+      "placeholder": "test_… or live_…",
+      "description": "From your Mollie dashboard: Developers → API keys. Use the test key in your Swell test environment and the live key in live."
+    },
+    {
+      "id": "payment_description",
+      "label": "Payment description",
+      "type": "short_text",
+      "placeholder": "Order from {store}",
+      "description": "Shown to shoppers on Mollie's payment page and their bank statement. {store} is replaced with your store name. Up to 255 characters."
+    }
+  ]
+}

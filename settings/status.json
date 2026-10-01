@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.swell.store/setting.json",
+  "label": "Status",
+  "description": "Updated automatically every 5 minutes.",
+  "fields": [
+    {
+      "id": "message",
+      "label": "Connection",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
+      "id": "methods",
+      "label": "Payment methods enabled in Mollie",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
+      "id": "last_checked",
+      "label": "Last checked",
+      "type": "short_text",
+      "readonly": true
+    }
+  ]
+}
