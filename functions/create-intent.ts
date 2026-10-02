@@ -1,5 +1,6 @@
 import { toMollieAmount } from './lib/amounts';
-import { createPayment } from './lib/mollie';
+import { buildAddress, buildLines, type LinesCart } from './lib/lines';
+import { createPayment, MollieApiError } from './lib/mollie';
 import { recordNewPayment } from './lib/records';
 import { mollieSettings, paymentDescription } from './lib/settings';
 
@@ -27,6 +28,10 @@ function validRedirectUrl(value: unknown): string | null {
   }
 }
 
+function optional<K extends string, V>(key: K, value: V | undefined): Partial<Record<K, V>> {
+  return value === undefined ? {} : ({ [key]: value } as Record<K, V>);
+}
+
 export default async function (req: SwellRequest) {
   const { swell } = req;
   const intent = (req.data.intent ?? {}) as IntentInput;
@@ -40,24 +45,38 @@ export default async function (req: SwellRequest) {
     const settings = await mollieSettings(swell);
 
     // The amount always comes from the cart on the server, never from the browser.
-    const cart = (await swell.get(`/carts/${cartId}`)) as {
-      id?: string;
-      currency?: string;
-      capture_total?: number;
-      grand_total?: number;
-    } | null;
+    const cart = (await swell.get(`/carts/${cartId}`, { expand: ['items.product', 'items.variant', 'account'] })) as
+      | (LinesCart & { id?: string })
+      | null;
     if (!cart?.id) throw new Error('Cart not found.');
 
     const total = cart.capture_total ?? cart.grand_total ?? 0;
     if (!(total > 0)) throw new Error('There is nothing to pay for this cart.');
     if (!cart.currency) throw new Error('The cart has no currency.');
 
-    const payment = await createPayment(settings.apiKey, {
+    const basics = {
       amount: toMollieAmount(total, cart.currency),
       description: paymentDescription(settings.paymentDescription, req.store?.url),
       redirectUrl,
       metadata: { cart_id: cart.id, store_id: req.store?.id ?? '' },
-    });
+    };
+    // Lines and addresses let Mollie offer Klarna, in3 and Riverty. They're optional for other methods.
+    const lines = buildLines(cart);
+    const extras = {
+      ...(lines ? { lines } : {}),
+      ...optional('billingAddress', buildAddress(cart.billing, cart.account)),
+      ...optional('shippingAddress', cart.shipping?.address1 ? buildAddress(cart.shipping, cart.account) : undefined),
+    };
+
+    let payment;
+    try {
+      payment = await createPayment(settings.apiKey, { ...basics, ...extras });
+    } catch (error) {
+      // If Mollie refuses the extra details, pay without them rather than block checkout.
+      const rejected = error instanceof MollieApiError && error.status === 422 && Object.keys(extras).length > 0;
+      if (!rejected) throw error;
+      payment = await createPayment(settings.apiKey, basics);
+    }
 
     if (!payment.checkoutUrl) throw new Error("Mollie didn't return a payment page.");
 

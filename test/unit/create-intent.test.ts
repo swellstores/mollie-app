@@ -70,7 +70,7 @@ describe('create-intent', () => {
         checkout_url: 'https://www.mollie.com/checkout/select-method/WDqYK6vllg',
       },
     });
-    expect(swell.get).toHaveBeenCalledWith('/carts/cart_1');
+    expect(swell.get).toHaveBeenCalledWith('/carts/cart_1', { expand: ['items.product', 'items.variant', 'account'] });
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.mollie.com/v2/payments');
@@ -81,6 +81,73 @@ describe('create-intent', () => {
       redirectUrl: RETURN_URL,
       metadata: { cart_id: 'cart_1', store_id: 'smpl' },
     });
+  });
+
+  it('sends order lines and addresses when the cart has them', async () => {
+    const fetchMock = mollieCreated();
+    const cart = {
+      ...CART,
+      capture_total: 42.5,
+      items: [{ quantity: 2, price: 21.25, product: { name: 'Mug', sku: 'MUG-1' } }],
+      billing: { first_name: 'Sam', last_name: 'Jansen', address1: 'Damrak 1', city: 'Amsterdam', zip: '1012 LG', country: 'nl' },
+      account: { email: 'sam@example.com' },
+    };
+    await run(swellMock({ cart }), { cart_id: 'cart_1', redirect_url: RETURN_URL });
+
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body.lines).toEqual([
+      {
+        type: 'physical',
+        description: 'Mug',
+        quantity: 2,
+        unitPrice: { currency: 'EUR', value: '21.25' },
+        totalAmount: { currency: 'EUR', value: '42.50' },
+        sku: 'MUG-1',
+      },
+    ]);
+    expect(body.billingAddress).toEqual({
+      email: 'sam@example.com',
+      givenName: 'Sam',
+      familyName: 'Jansen',
+      streetAndNumber: 'Damrak 1',
+      postalCode: '1012 LG',
+      city: 'Amsterdam',
+      country: 'NL',
+    });
+    expect(body).not.toHaveProperty('shippingAddress');
+  });
+
+  it('leaves lines out when they would not add up to the amount', async () => {
+    const fetchMock = mollieCreated();
+    const cart = { ...CART, items: [{ quantity: 1, price: 30, product: { name: 'Mug' } }] }; // 30 != 42.50
+    await run(swellMock({ cart }), { cart_id: 'cart_1', redirect_url: RETURN_URL });
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body).not.toHaveProperty('lines');
+  });
+
+  it('retries without lines and addresses when Mollie rejects them', async () => {
+    const bodies: any[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = JSON.parse(init.body as string);
+        bodies.push(body);
+        if (body.lines) {
+          return new Response(JSON.stringify({ status: 422, detail: 'The billing address is invalid' }), { status: 422 });
+        }
+        return new Response(
+          JSON.stringify({ id: 'tr_WDqYK6vllg', status: 'open', amount: body.amount, _links: { checkout: { href: 'https://mollie.test/pay' } } }),
+          { status: 201 },
+        );
+      }),
+    );
+    const cart = { ...CART, items: [{ quantity: 1, price: 42.5, product: { name: 'Mug' } }], account: { email: 'sam@example.com' } };
+    const response = await run(swellMock({ cart }), { cart_id: 'cart_1', redirect_url: RETURN_URL });
+
+    expect(response).toHaveProperty('result.id', 'tr_WDqYK6vllg');
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).not.toHaveProperty('lines');
+    expect(bodies[1]).not.toHaveProperty('billingAddress');
   });
 
   it('records the payment for the safety net', async () => {

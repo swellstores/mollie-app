@@ -1,4 +1,5 @@
 import type { MollieAmount } from './amounts';
+import type { MollieAddress, MollieLine } from './lines';
 
 const MOLLIE_API_URL = 'https://api.mollie.com/v2';
 
@@ -83,6 +84,9 @@ export interface CreatePaymentInput {
   redirectUrl: string;
   metadata: Record<string, string>;
   locale?: string;
+  lines?: MollieLine[];
+  billingAddress?: MollieAddress;
+  shippingAddress?: MollieAddress;
 }
 
 /** Mollie payment ids look like tr_WDqYK6vllg. */
