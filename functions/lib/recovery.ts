@@ -111,6 +111,10 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
 
   let order: { id?: string; number?: string; paid?: boolean } | null;
   try {
+    // Point the cart at the paid payment: the shopper may have started another one since.
+    await swell.put(`/carts/${cart.id}`, {
+      billing: { method: 'mollie', mollie: { token: payment.id }, intent: { mollie: { id: payment.id } } },
+    });
     order = (await swell.post('/orders', { cart_id: cart.id })) as typeof order;
   } catch (error) {
     return unmatched(swell, record, payment, `The app couldn't create the order: ${errorMessage(error)}`);

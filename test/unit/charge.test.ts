@@ -156,11 +156,11 @@ describe('charge: payment record', () => {
     });
   });
 
-  it('does not touch records on the capture call', async () => {
+  it('marks the record completed when Swell only makes the capture call', async () => {
     mollie({ status: 'paid' });
     const swell = swellMock({ id: 'rec_1', mollie_id: PAYMENT_ID, resolution: 'pending' });
-    await charge({ ...ORDER, captured: true }, swell);
-    expect(swell.put).not.toHaveBeenCalled();
+    await charge({ ...ORDER, captured: true, order_id: 'order_1' }, swell);
+    expect(swell.put).toHaveBeenCalledWith('/mollie-payments/rec_1', expect.objectContaining({ resolution: 'completed' }));
   });
 });
 
@@ -193,6 +193,22 @@ describe('charge: second call (captured: true)', () => {
       error: { message: "Can't capture EUR 50.00: Mollie only holds EUR 42.50 for this payment." },
     });
     expect(captures).toEqual([]);
+  });
+
+  it('rejects a paid payment for less than the order total (cart changed after paying)', async () => {
+    // Found in testing: shopper paid EUR 10, the cart grew to EUR 20, and Swell only made the capture call.
+    const { captures } = mollie({ status: 'paid', value: '10.00' });
+    await expect(charge({ ...ORDER, amount: 20, captured: true })).resolves.toEqual({
+      success: false,
+      error: { message: "The amount paid on Mollie (EUR 10.00) doesn't match the order total (EUR 20.00)." },
+    });
+    expect(captures).toEqual([]);
+  });
+
+  it('rejects a paid payment for more than the order total', async () => {
+    mollie({ status: 'paid', value: '42.50' });
+    const result = await charge({ ...ORDER, amount: 30, captured: true });
+    expect(result.success).toBe(false);
   });
 
   it('succeeds without capturing a payment that is already paid', async () => {

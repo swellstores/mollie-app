@@ -77,9 +77,11 @@ function swellMock({ records = [], carts = {}, order, orders = {}, unmatchedCoun
 
 type Swell = ReturnType<typeof swellMock>;
 
+/** The single update made to the payment record (cart updates are ignored). */
 function saved(swell: Swell) {
-  expect(swell.put).toHaveBeenCalledTimes(1);
-  const [url, values] = swell.put.mock.calls[0];
+  const calls = swell.put.mock.calls.filter(([url]: [string]) => url.startsWith('/mollie-payments/'));
+  expect(calls).toHaveLength(1);
+  const [url, values] = calls[0];
   expect(url).toBe('/mollie-payments/rec_1');
   return values;
 }
@@ -156,7 +158,12 @@ describe('followUp: paid payments', () => {
     const swell = swellMock({ carts: { cart_1: CART }, order: { id: 'order_2', number: '100002', paid: true } });
 
     await expect(follow(swell)).resolves.toBe('recovered');
+    expect(swell.put).toHaveBeenCalledWith('/carts/cart_1', {
+      billing: { method: 'mollie', mollie: { token: 'tr_1' }, intent: { mollie: { id: 'tr_1' } } },
+    });
     expect(swell.post).toHaveBeenCalledWith('/orders', { cart_id: 'cart_1' });
+    // The cart is pointed at the paid payment before the order is created.
+    expect(swell.put.mock.invocationCallOrder[0]).toBeLessThan(swell.post.mock.invocationCallOrder[0]);
     expect(saved(swell)).toEqual({
       resolution: 'recovered',
       mollie_status: 'paid',
@@ -185,6 +192,7 @@ describe('followUp: paid payments', () => {
 
     await expect(follow(swell)).resolves.toBe('unmatched');
     expect(swell.post).not.toHaveBeenCalled();
+    expect(swell.put).not.toHaveBeenCalledWith('/carts/cart_1', expect.anything());
     expect(saved(swell)).toEqual({
       resolution: 'unmatched',
       mollie_status: 'paid',

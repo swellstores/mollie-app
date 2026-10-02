@@ -44,9 +44,10 @@ function paymentId(input: ChargeInput): string | undefined {
 }
 
 /**
- * Swell calls this twice per order: first with captured: false (confirm the payment is paid or held),
- * then with captured: true (capture a held payment). Mollie payments are created and paid on Mollie's
- * page before the order exists, so this never creates a payment; it only checks and captures one.
+ * Swell may call this twice per order (captured: false to confirm, then captured: true to capture) or
+ * only once with captured: true, so every call checks the amount itself. Mollie payments are created
+ * and paid on Mollie's page before the order exists: this never creates a payment, it only checks
+ * and captures one.
  */
 export default async function (req: SwellRequest) {
   const input = req.data as ChargeInput;
@@ -58,43 +59,38 @@ export default async function (req: SwellRequest) {
 
     const settings = await mollieSettings(req.swell);
     const payment = await getPayment(settings.apiKey, id);
-    const capturing = input.captured !== false;
+    const requested = toMollieAmount(input.amount, input.currency);
 
-    if (!capturing) {
-      // Confirm: the shopper must have paid (or the payment is held) the exact order amount.
-      if (payment.status !== 'paid' && payment.status !== 'authorized') {
-        throw new Error(notPaid(payment.status));
-      }
-      if (!sameAmount(payment.amount, input.amount, input.currency)) {
-        throw new Error(
-          `The amount paid on Mollie (${formatAmount(payment.amount)}) doesn't match the order total (${formatAmount(
-            toMollieAmount(input.amount, input.currency),
-          )}).`,
-        );
-      }
-      await markCompleted(req.swell, payment.id, { orderId: input.order_id, mollieStatus: payment.status });
-      return { success: true, transaction_id: payment.id };
-    }
-
-    // Capture.
-    if (payment.status === 'paid') {
-      return { success: true, transaction_id: payment.id }; // Paid straight away (e.g. iDEAL) or already captured.
-    }
-    if (payment.status !== 'authorized') {
+    if (payment.status !== 'paid' && payment.status !== 'authorized') {
       throw new Error(notPaid(payment.status));
     }
 
-    const requested = toMollieAmount(input.amount, input.currency);
-    if (requested.currency !== payment.amount.currency.toUpperCase() || Number(requested.value) > Number(payment.amount.value)) {
-      throw new Error(
-        `Can't capture ${formatAmount(requested)}: Mollie only holds ${formatAmount(payment.amount)} for this payment.`,
-      );
+    if (payment.status === 'paid' || input.captured === false) {
+      // Paid straight away (e.g. iDEAL), already captured, or the confirm call:
+      // the shopper must have paid (or the payment holds) exactly the order amount.
+      if (!sameAmount(payment.amount, input.amount, input.currency)) {
+        throw new Error(
+          `The amount paid on Mollie (${formatAmount(payment.amount)}) doesn't match the order total (${formatAmount(
+            requested,
+          )}).`,
+        );
+      }
+    } else {
+      // Capture a held payment: never more than the hold, and only part of it if Swell asks for less.
+      if (
+        requested.currency !== payment.amount.currency.toUpperCase() ||
+        Number(requested.value) > Number(payment.amount.value)
+      ) {
+        throw new Error(
+          `Can't capture ${formatAmount(requested)}: Mollie only holds ${formatAmount(payment.amount)} for this payment.`,
+        );
+      }
+      const partial = Number(requested.value) < Number(payment.amount.value) ? requested : undefined;
+      const capture = await capturePayment(settings.apiKey, payment.id, partial);
+      if (capture.status === 'failed') throw new Error('Mollie could not capture the payment.');
     }
-    // Capture the full hold unless Swell asks for less.
-    const partial = Number(requested.value) < Number(payment.amount.value) ? requested : undefined;
-    const capture = await capturePayment(settings.apiKey, payment.id, partial);
-    if (capture.status === 'failed') throw new Error('Mollie could not capture the payment.');
 
+    await markCompleted(req.swell, payment.id, { orderId: input.order_id, mollieStatus: payment.status });
     return { success: true, transaction_id: payment.id };
   } catch (error) {
     return { success: false, error: { message: error instanceof Error ? error.message : String(error) } };
