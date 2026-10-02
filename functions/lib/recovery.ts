@@ -1,5 +1,5 @@
 import { sameAmount, toMollieAmount } from './amounts';
-import { getPayment, type MolliePayment } from './mollie';
+import { getPayment, MollieApiError, type MolliePayment } from './mollie';
 import { formatAmount, orderNumber, PAYMENTS, type PaymentRecord } from './records';
 
 /** Leave a paid payment alone this long, so the shopper's own checkout can place the order first. */
@@ -57,7 +57,22 @@ async function unmatched(swell: SwellAPI, record: PaymentRecord, payment: Mollie
 
 /** Decide what to do with one pending payment, and do it. */
 export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentRecord): Promise<Outcome> {
-  const payment = await getPayment(apiKey, record.mollie_id);
+  let payment: MolliePayment;
+  try {
+    payment = await getPayment(apiKey, record.mollie_id);
+  } catch (error) {
+    // Unknown on Mollie (or not a Mollie id at all): stop following it up, so it can't block real payments.
+    // Other errors (wrong key, Mollie down) are retried on the next run.
+    if (error instanceof MollieApiError && [400, 404, 410].includes(error.status)) {
+      await update(swell, record, {
+        resolution: 'abandoned',
+        note: 'Not found on Mollie.',
+        date_resolved: now().toISOString(),
+      });
+      return 'abandoned';
+    }
+    throw error;
+  }
 
   if (payment.status === 'canceled' || payment.status === 'expired' || payment.status === 'failed') {
     await update(swell, record, {
@@ -94,9 +109,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
         swell,
         record,
         payment,
-        `Order #${order.number} was placed but its payment failed: Mollie received ${formatAmount(
-          payment.amount,
-        )}, the order is ${orderTotal}.`,
+        `Order #${order.number} is unpaid: Mollie received ${formatAmount(payment.amount)}, the order is ${orderTotal}.`,
         cart.order_id,
       );
     }
@@ -119,7 +132,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
   }
 
   if (!cart?.id) {
-    return unmatched(swell, record, payment, "The shopper's cart no longer exists, so the order can't be created from it.");
+    return unmatched(swell, record, payment, "The shopper's cart no longer exists.");
   }
 
   const total = cart.capture_total ?? cart.grand_total;
@@ -129,7 +142,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
       swell,
       record,
       payment,
-      `The cart changed after the shopper paid: Mollie received ${formatAmount(payment.amount)}, but the cart now totals ${cartTotal}.`,
+      `Cart changed after payment: Mollie received ${formatAmount(payment.amount)}, the cart is now ${cartTotal}.`,
     );
   }
 
@@ -141,17 +154,17 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
     });
     order = (await swell.post('/orders', { cart_id: cart.id })) as typeof order;
   } catch (error) {
-    return unmatched(swell, record, payment, `The app couldn't create the order: ${errorMessage(error)}`);
+    return unmatched(swell, record, payment, `Couldn't create the order: ${errorMessage(error)}`);
   }
   if (!order?.id) {
-    return unmatched(swell, record, payment, "The app couldn't create the order from the shopper's cart.");
+    return unmatched(swell, record, payment, "Couldn't create the order from the cart.");
   }
   if (order.paid === false) {
     return unmatched(
       swell,
       record,
       payment,
-      `The app created order #${order.number}, but the Mollie payment wasn't attached to it. Check the order's payment before shipping.`,
+      `Order #${order.number} was created without the payment. Check it before shipping.`,
       order.id,
     );
   }
@@ -161,7 +174,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
     mollie_status: payment.status,
     order_id: order.id,
     order_number: order.number ? `#${order.number}` : undefined,
-    note: 'The shopper paid but left before returning to checkout. The app created the order.',
+    note: 'The shopper left after paying; the app created the order.',
     date_resolved: now().toISOString(),
   });
   return 'recovered';

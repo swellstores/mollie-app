@@ -40,6 +40,6 @@ export const statusMessages = {
   attention: (count: number) =>
     count === 0
       ? 'None.'
-      : `${count} Mollie ${count === 1 ? 'payment needs' : 'payments need'} attention: the shopper paid but has no order. See Orders → Mollie payments.`,
+      : `${count} Mollie ${count === 1 ? 'payment needs' : 'payments need'} attention: the shopper paid but has no paid order. See Orders → Mollie payments.`,
   noMethods: 'None. Turn on payment methods in your Mollie dashboard: Settings → Website profiles → Payment methods.',
 };

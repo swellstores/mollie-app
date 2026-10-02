@@ -157,6 +157,7 @@ describe('create-intent', () => {
 
     expect(swell.post).toHaveBeenCalledWith('/mollie-payments', {
       mollie_id: 'tr_WDqYK6vllg',
+      source: 'checkout',
       mode: 'test',
       cart_id: 'cart_1',
       amount: 42.5,

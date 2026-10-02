@@ -33,6 +33,7 @@ export async function recordNewPayment(
   try {
     await swell.post(PAYMENTS, {
       mollie_id: payment.id,
+      source: 'checkout',
       mode: details.mode,
       cart_id: details.cartId,
       amount: details.amount,

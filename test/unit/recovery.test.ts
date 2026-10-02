@@ -100,6 +100,31 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('followUp: payments Mollie does not know', () => {
+  it('stops following up a payment that does not exist on Mollie', async () => {
+    mollie({}); // every lookup answers 404
+    const swell = swellMock();
+    await expect(follow(swell, record({ mollie_id: 'tr_madeup' }))).resolves.toBe('abandoned');
+    expect(saved(swell)).toEqual({
+      resolution: 'abandoned',
+      note: 'Not found on Mollie.',
+      date_resolved: '2026-10-02T12:00:00.000Z',
+    });
+  });
+
+  it('stops following up a record whose id is not a Mollie id', async () => {
+    const swell = swellMock();
+    await expect(follow(swell, record({ mollie_id: 'made up' }))).resolves.toBe('abandoned');
+  });
+
+  it('retries later when Mollie rejects the API key', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ status: 401, detail: 'Invalid key' }), { status: 401 })));
+    const swell = swellMock();
+    await expect(follow(swell)).rejects.toThrow('Mollie API 401');
+    expect(swell.put).not.toHaveBeenCalled();
+  });
+});
+
 describe('followUp: payments that are not paid', () => {
   it.each(['canceled', 'expired', 'failed'])('marks a %s payment as not paid', async (status) => {
     mollie({ tr_1: { status } });
@@ -158,7 +183,7 @@ describe('followUp: paid payments', () => {
     expect(saved(swell)).toEqual({
       resolution: 'unmatched',
       mollie_status: 'paid',
-      note: 'Order #100004 was placed but its payment failed: Mollie received EUR 10.00, the order is EUR 20.00.',
+      note: 'Order #100004 is unpaid: Mollie received EUR 10.00, the order is EUR 20.00.',
       order_id: 'order_4',
       order_number: '#100004',
     });
@@ -198,7 +223,7 @@ describe('followUp: paid payments', () => {
       mollie_status: 'paid',
       order_id: 'order_2',
       order_number: '#100002',
-      note: 'The shopper paid but left before returning to checkout. The app created the order.',
+      note: 'The shopper left after paying; the app created the order.',
       date_resolved: '2026-10-02T12:00:00.000Z',
     });
   });
@@ -225,7 +250,7 @@ describe('followUp: paid payments', () => {
     expect(saved(swell)).toEqual({
       resolution: 'unmatched',
       mollie_status: 'paid',
-      note: 'The cart changed after the shopper paid: Mollie received EUR 10.00, but the cart now totals EUR 15.00.',
+      note: 'Cart changed after payment: Mollie received EUR 10.00, the cart is now EUR 15.00.',
       order_id: undefined,
       order_number: undefined,
     });
@@ -235,7 +260,7 @@ describe('followUp: paid payments', () => {
     mollie({ tr_1: { status: 'paid', paidAt: PAID_LONG_AGO } });
     const swell = swellMock({ carts: { cart_1: null } });
     await expect(follow(swell)).resolves.toBe('unmatched');
-    expect(saved(swell).note).toBe("The shopper's cart no longer exists, so the order can't be created from it.");
+    expect(saved(swell).note).toBe("The shopper's cart no longer exists.");
   });
 
   it("flags a payment when Swell can't create the order, with Swell's reason", async () => {
@@ -247,7 +272,7 @@ describe('followUp: paid payments', () => {
 
     await expect(follow(swell)).resolves.toBe('unmatched');
     expect(saved(swell).note).toBe(
-      "The app couldn't create the order: Product [Sample] Mollie test product is out of stock",
+      "Couldn't create the order: Product [Sample] Mollie test product is out of stock",
     );
   });
 
@@ -264,7 +289,7 @@ describe('followUp: paid payments', () => {
       resolution: 'unmatched',
       order_id: 'order_2',
       order_number: '#100002',
-      note: "The app created order #100002, but the Mollie payment wasn't attached to it. Check the order's payment before shipping.",
+      note: 'Order #100002 was created without the payment. Check it before shipping.',
     });
   });
 });
@@ -306,7 +331,15 @@ describe('recoverPayments', () => {
   });
 
   it('keeps going when one payment fails', async () => {
-    mollie({ tr_2: { status: 'canceled' } }); // tr_1 answers 404
+    // tr_1: Mollie is down for this one (500), retried next run; tr_2: canceled.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.endsWith('/tr_1')
+          ? new Response(JSON.stringify({ status: 500, detail: 'Server error' }), { status: 500 })
+          : new Response(JSON.stringify({ id: 'tr_2', status: 'canceled', amount: { currency: 'EUR', value: '10.00' } }), { status: 200 }),
+      ),
+    );
     const swell = swellMock({
       records: [record({ id: 'rec_1', mollie_id: 'tr_1' }), record({ id: 'rec_2', mollie_id: 'tr_2' })],
     });

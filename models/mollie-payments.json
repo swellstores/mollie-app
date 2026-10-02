@@ -12,9 +12,17 @@
       "immutable": true,
       "description": "Mollie payment id (tr_…)"
     },
+    "source": {
+      "type": "string",
+      "immutable": true,
+      "description": "Who created the record. The app sets 'checkout'; records without it are rejected (functions/reject-manual-payments.ts)."
+    },
     "mode": {
       "type": "string",
-      "enum": ["test", "live"],
+      "enum": [
+        "test",
+        "live"
+      ],
       "description": "Mollie mode of the API key that created the payment"
     },
     "cart_id": {
@@ -48,7 +56,14 @@
     },
     "resolution": {
       "type": "string",
-      "enum": ["pending", "completed", "recovered", "unmatched", "resolved", "abandoned"],
+      "enum": [
+        "pending",
+        "completed",
+        "recovered",
+        "unmatched",
+        "resolved",
+        "abandoned"
+      ],
       "default": "pending",
       "description": "pending: waiting for the shopper. completed: paid through checkout. recovered: the safety net created the order. unmatched: paid, but no order could be created (the merchant must act). resolved: the merchant handled it. abandoned: never paid."
     },

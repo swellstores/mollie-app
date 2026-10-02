@@ -100,13 +100,13 @@ describe('check-payments: connection status', () => {
     const one = swellMock(TEST_KEY, { unmatched: 1 });
     await run(one);
     expect(savedStatus(one).attention).toBe(
-      '1 Mollie payment needs attention: the shopper paid but has no order. See Orders → Mollie payments.',
+      '1 Mollie payment needs attention: the shopper paid but has no paid order. See Orders → Mollie payments.',
     );
 
     const three = swellMock(TEST_KEY, { unmatched: 3 });
     await run(three);
     expect(savedStatus(three).attention).toBe(
-      '3 Mollie payments need attention: the shopper paid but has no order. See Orders → Mollie payments.',
+      '3 Mollie payments need attention: the shopper paid but has no paid order. See Orders → Mollie payments.',
     );
   });
 

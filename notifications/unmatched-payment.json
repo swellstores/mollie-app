@@ -13,7 +13,7 @@
     "amount_display": "EUR 42.50",
     "mollie_status": "paid",
     "resolution": "unmatched",
-    "note": "The cart changed after the shopper paid: Mollie received EUR 42.50, but the cart now totals EUR 50.00.",
+    "note": "Cart changed after payment: Mollie received EUR 42.50, the cart is now EUR 50.00.",
     "mollie_url": "https://my.mollie.com/dashboard/payments/tr_WDqYK6vllg",
     "cart_id": "6abf857768b0d20012f93e55",
     "cart": {
