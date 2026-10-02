@@ -1,3 +1,4 @@
+import { trace } from './lib/trace';
 import { sameAmount, toMollieAmount, type MollieAmount } from './lib/amounts';
 import { capturePayment, getPayment, isPaymentId, type MolliePaymentStatus } from './lib/mollie';
 import { markCompleted } from './lib/records';
@@ -49,7 +50,7 @@ function paymentId(input: ChargeInput): string | undefined {
  * and paid on Mollie's page before the order exists: this never creates a payment, it only checks
  * and captures one.
  */
-export default async function (req: SwellRequest) {
+async function handle(req: SwellRequest) {
   const input = req.data as ChargeInput;
 
   try {
@@ -95,4 +96,22 @@ export default async function (req: SwellRequest) {
   } catch (error) {
     return { success: false, error: { message: error instanceof Error ? error.message : String(error) } };
   }
+}
+
+// TEMPORARY (1.0.5): trace calls during checkout. Remove before release.
+export default async function (req: SwellRequest) {
+  const result = await handle(req);
+  const data = req.data as any;
+  await trace(req, {
+    fn: 'charge',
+    captured: data.captured,
+    amount: data.amount,
+    currency: data.currency,
+    order_id: data.order_id,
+    transaction_id: data.transaction_id,
+    intent_id: data.intent?.mollie?.id,
+    success: result.success,
+    error: (result as any).error?.message,
+  });
+  return result;
 }

@@ -143,7 +143,7 @@ describe('charge: payment record', () => {
     mollie({ status: 'paid' });
     const swell = swellMock({ id: 'rec_1', mollie_id: PAYMENT_ID, resolution: 'recovered' });
     await charge({ ...ORDER, captured: false, order_id: 'order_1' }, swell);
-    expect(swell.put).not.toHaveBeenCalled();
+    expect(swell.put).not.toHaveBeenCalledWith('/mollie-payments/rec_1', expect.anything());
   });
 
   it('still succeeds when the record cannot be updated', async () => {
