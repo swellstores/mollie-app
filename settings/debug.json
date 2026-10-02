@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.swell.store/setting.json",
+  "label": "Diagnostics (temporary)",
+  "description": "Temporary trace of payment function calls, used while testing. Will be removed before release.",
+  "fields": [
+    {
+      "id": "trace",
+      "label": "Trace",
+      "type": "long_text",
+      "readonly": true
+    }
+  ]
+}

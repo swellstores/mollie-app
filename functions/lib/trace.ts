@@ -6,8 +6,15 @@ const MAX_ENTRIES = 30;
 export async function trace(req: SwellRequest, entry: Record<string, unknown>): Promise<void> {
   try {
     const path = `/settings/${req.appId}`;
-    const current = (await req.swell.get(path)) as { debug?: { trace?: unknown[] } } | null;
-    const entries = Array.isArray(current?.debug?.trace) ? current!.debug!.trace! : [];
+    // Stored as a JSON string in the declared settings field debug.trace (settings/debug.json).
+    const current = (await req.swell.get(path)) as { debug?: { trace?: string } } | null;
+    let entries: unknown[] = [];
+    try {
+      const parsed = JSON.parse(current?.debug?.trace ?? '[]');
+      entries = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      entries = [];
+    }
     const data = (req.data ?? {}) as Record<string, unknown>;
     entries.push({
       at: new Date(Date.now()).toISOString(),
@@ -16,7 +23,7 @@ export async function trace(req: SwellRequest, entry: Record<string, unknown>): 
       event: (data.$event as { type?: string } | undefined)?.type,
       ...entry,
     });
-    await req.swell.put(path, { debug: { trace: entries.slice(-MAX_ENTRIES) } });
+    await req.swell.put(path, { debug: { trace: JSON.stringify(entries.slice(-MAX_ENTRIES)) } });
   } catch {
     // Diagnostics must never affect payments.
   }
