@@ -165,6 +165,15 @@ describe('followUp: paid payments', () => {
     expect(swell.post).not.toHaveBeenCalled();
   });
 
+  it("treats an order without an explicit paid: true as unpaid", async () => {
+    mollie({ tr_1: { status: 'paid', paidAt: PAID_JUST_NOW } });
+    const swell = swellMock({
+      carts: { cart_1: { ...CART, order_id: 'order_4' } },
+      orders: { order_4: { number: '100004', grand_total: 10, currency: 'EUR' } },
+    });
+    await expect(follow(swell)).resolves.toBe('unmatched');
+  });
+
   it('gives the shopper time to return before creating the order', async () => {
     mollie({ tr_1: { status: 'paid', paidAt: PAID_JUST_NOW } });
     const swell = swellMock({ carts: { cart_1: CART } });

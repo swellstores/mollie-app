@@ -76,13 +76,15 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
   // Paid (or held). Did checkout already place the order?
   const cart = record.cart_id ? ((await swell.get(`/carts/${record.cart_id}`)) as Cart | null) : null;
   if (cart?.order_id) {
-    const order = (await swell.get(`/orders/${cart.order_id}`, { fields: 'number,paid,grand_total,currency' })) as {
+    // Full record: in testing, an unpaid order fetched with a `fields` filter wasn't seen as unpaid.
+    const order = (await swell.get(`/orders/${cart.order_id}`)) as {
       number?: string;
       paid?: boolean;
       grand_total?: number;
       currency?: string;
     } | null;
-    if (order && order.paid === false) {
+    // Only an explicit paid: true counts as paid.
+    if (order && order.paid !== true) {
       // Checkout placed the order, but its payment was rejected (e.g. the cart grew after paying).
       const orderTotal =
         typeof order.grand_total === 'number' && order.currency
