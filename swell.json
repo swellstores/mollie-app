@@ -3,7 +3,7 @@
 	"id": "mollie",
 	"name": "Mollie",
 	"type": "integration",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"permissions": [],
 	"extensions": [
 		{
