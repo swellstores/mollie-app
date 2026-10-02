@@ -133,3 +133,26 @@ export async function capturePayment(apiKey: string, id: string, amount?: Mollie
   });
   return { id: body.id, status: body.status, amount: body.amount };
 }
+
+export interface MollieRefund {
+  id: string;
+  status: 'queued' | 'pending' | 'processing' | 'refunded' | 'failed' | 'canceled';
+  amount: MollieAmount;
+}
+
+/** Refund part or all of a paid payment. Refunds are processed asynchronously. */
+export async function refundPayment(
+  apiKey: string,
+  id: string,
+  amount: MollieAmount,
+  metadata?: Record<string, string>,
+): Promise<MollieRefund> {
+  if (!isPaymentId(id)) {
+    throw new MollieApiError(`Not a Mollie payment id: ${id}`, 400);
+  }
+  const body = await mollieRequest(apiKey, `/payments/${id}/refunds`, {
+    method: 'POST',
+    body: JSON.stringify(metadata ? { amount, metadata } : { amount }),
+  });
+  return { id: body.id, status: body.status, amount: body.amount };
+}
