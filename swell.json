@@ -1,14 +1,14 @@
 {
-  "description": "Accept iDEAL, Bancontact, cards, Klarna and more through Mollie",
-  "id": "mollie",
-  "name": "Mollie",
-  "type": "integration",
-  "version": "1.0.0",
-  "permissions": [],
-  "extensions": [
-    {
-      "id": "mollie",
-      "type": "payment"
-    }
-  ]
+	"description": "Accept iDEAL, Bancontact, cards, Klarna and more through Mollie",
+	"id": "mollie",
+	"name": "Mollie",
+	"type": "integration",
+	"version": "1.0.1-beta.1",
+	"permissions": [],
+	"extensions": [
+		{
+			"id": "mollie",
+			"type": "payment"
+		}
+	]
 }
