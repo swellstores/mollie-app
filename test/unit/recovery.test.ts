@@ -132,7 +132,7 @@ describe('followUp: paid payments', () => {
     mollie({ tr_1: { status: 'paid', paidAt: PAID_JUST_NOW } });
     const swell = swellMock({
       carts: { cart_1: { ...CART, order_id: 'order_1' } },
-      orders: { order_1: { number: '100001' } },
+      orders: { order_1: { number: '100001', paid: true } },
     });
     await expect(follow(swell)).resolves.toBe('completed');
     expect(saved(swell)).toEqual({
@@ -141,6 +141,26 @@ describe('followUp: paid payments', () => {
       order_id: 'order_1',
       order_number: '#100001',
       date_resolved: '2026-10-02T12:00:00.000Z',
+    });
+    expect(swell.post).not.toHaveBeenCalled();
+  });
+
+  it('flags a payment whose order was placed but not paid', async () => {
+    // Found in testing: checkout placed order #100004 for EUR 20, the charge rejected the EUR 10 payment,
+    // and checkout still showed the shopper a confirmation.
+    mollie({ tr_1: { status: 'paid', paidAt: PAID_JUST_NOW } });
+    const swell = swellMock({
+      carts: { cart_1: { ...CART, capture_total: 20, order_id: 'order_4' } },
+      orders: { order_4: { number: '100004', paid: false, grand_total: 20, currency: 'EUR' } },
+    });
+
+    await expect(follow(swell)).resolves.toBe('unmatched');
+    expect(saved(swell)).toEqual({
+      resolution: 'unmatched',
+      mollie_status: 'paid',
+      note: 'Order #100004 was placed but its payment failed: Mollie received EUR 10.00, the order is EUR 20.00.',
+      order_id: 'order_4',
+      order_number: '#100004',
     });
     expect(swell.post).not.toHaveBeenCalled();
   });

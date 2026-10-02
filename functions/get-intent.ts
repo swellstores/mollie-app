@@ -1,4 +1,3 @@
-import { trace } from './lib/trace';
 import { getPayment, isPaymentId } from './lib/mollie';
 import { mollieSettings } from './lib/settings';
 
@@ -11,7 +10,7 @@ export const config: SwellConfig = {
   },
 };
 
-async function handle(req: SwellRequest) {
+export default async function (req: SwellRequest) {
   const { swell } = req;
   const intent = (req.data.intent ?? {}) as { id?: string };
 
@@ -33,12 +32,4 @@ async function handle(req: SwellRequest) {
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }
-}
-
-// TEMPORARY (1.0.5): trace calls during checkout. Remove before release.
-export default async function (req: SwellRequest) {
-  const result = await handle(req);
-  const data = req.data as any;
-  await trace(req, { fn: 'get-intent', id: data.intent?.id, result: result.error ?? (result as any).result?.status, mollie_amount: (result as any).result?.amount?.value });
-  return result;
 }

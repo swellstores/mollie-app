@@ -1,4 +1,3 @@
-import { trace } from './lib/trace';
 import { toMollieAmount } from './lib/amounts';
 import { createPayment } from './lib/mollie';
 import { recordNewPayment } from './lib/records';
@@ -28,7 +27,7 @@ function validRedirectUrl(value: unknown): string | null {
   }
 }
 
-async function handle(req: SwellRequest) {
+export default async function (req: SwellRequest) {
   const { swell } = req;
   const intent = (req.data.intent ?? {}) as IntentInput;
 
@@ -74,12 +73,4 @@ async function handle(req: SwellRequest) {
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }
-}
-
-// TEMPORARY (1.0.5): trace calls during checkout. Remove before release.
-export default async function (req: SwellRequest) {
-  const result = await handle(req);
-  const data = req.data as any;
-  await trace(req, { fn: 'create-intent', cart_id: data.intent?.cart_id, result: (result as any).result?.id ?? (result as any).error });
-  return result;
 }

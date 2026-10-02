@@ -76,11 +76,33 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
   // Paid (or held). Did checkout already place the order?
   const cart = record.cart_id ? ((await swell.get(`/carts/${record.cart_id}`)) as Cart | null) : null;
   if (cart?.order_id) {
+    const order = (await swell.get(`/orders/${cart.order_id}`, { fields: 'number,paid,grand_total,currency' })) as {
+      number?: string;
+      paid?: boolean;
+      grand_total?: number;
+      currency?: string;
+    } | null;
+    if (order && order.paid === false) {
+      // Checkout placed the order, but its payment was rejected (e.g. the cart grew after paying).
+      const orderTotal =
+        typeof order.grand_total === 'number' && order.currency
+          ? formatAmount(toMollieAmount(order.grand_total, order.currency))
+          : 'a different amount';
+      return unmatched(
+        swell,
+        record,
+        payment,
+        `Order #${order.number} was placed but its payment failed: Mollie received ${formatAmount(
+          payment.amount,
+        )}, the order is ${orderTotal}.`,
+        cart.order_id,
+      );
+    }
     await update(swell, record, {
       resolution: 'completed',
       mollie_status: payment.status,
       order_id: cart.order_id,
-      order_number: await orderNumber(swell, cart.order_id),
+      order_number: order?.number ? `#${order.number}` : undefined,
       date_resolved: now().toISOString(),
     });
     return 'completed';
