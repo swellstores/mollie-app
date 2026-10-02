@@ -7,10 +7,14 @@ const NOW = new Date('2026-10-01T12:00:00.000Z').getTime();
 const TEST_KEY = 'test_dHar4XY7LxsDOtmnkVtjNVWXLSlXsM';
 const LIVE_KEY = 'live_dHar4XY7LxsDOtmnkVtjNVWXLSlXsM';
 
-function swellMock(apiKey?: string) {
+function swellMock(apiKey?: string, { unmatched = 0 } = {}) {
   return {
     settings: vi.fn().mockResolvedValue(apiKey === undefined ? {} : { mollie: { api_key: apiKey } }),
     put: vi.fn().mockResolvedValue({}),
+    // No pending payments to follow up; `unmatched` payments waiting for the merchant.
+    get: vi.fn(async (_url: string, query: any) =>
+      query?.where?.resolution === 'unmatched' ? { count: unmatched, results: [] } : { count: 0, results: [] },
+    ),
   };
 }
 
@@ -49,6 +53,7 @@ describe('check-payments: connection status', () => {
     expect(savedStatus(swell)).toEqual({
       message: statusMessages.notConnected,
       methods: '',
+      attention: '',
       last_checked: 'Thu, 01 Oct 2026 12:00:00 GMT',
     });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -81,6 +86,43 @@ describe('check-payments: connection status', () => {
     const status = savedStatus(swell);
     expect(status.message).toBe(statusMessages.connected('test'));
     expect(status.methods).toBe('iDEAL, Card, Bancontact');
+  });
+
+  it('reports no payments needing attention', async () => {
+    mollieMethods([{ id: 'ideal', description: 'iDEAL' }]);
+    const swell = swellMock(TEST_KEY);
+    await run(swell);
+    expect(savedStatus(swell).attention).toBe('None.');
+  });
+
+  it('counts payments needing attention', async () => {
+    mollieMethods([{ id: 'ideal', description: 'iDEAL' }]);
+    const one = swellMock(TEST_KEY, { unmatched: 1 });
+    await run(one);
+    expect(savedStatus(one).attention).toBe(
+      '1 Mollie payment needs attention: the shopper paid but has no order. See Orders → Mollie payments.',
+    );
+
+    const three = swellMock(TEST_KEY, { unmatched: 3 });
+    await run(three);
+    expect(savedStatus(three).attention).toBe(
+      '3 Mollie payments need attention: the shopper paid but has no order. See Orders → Mollie payments.',
+    );
+  });
+
+  it('still shows the connection when the safety net fails', async () => {
+    mollieMethods([{ id: 'ideal', description: 'iDEAL' }]);
+    const swell = swellMock(TEST_KEY);
+    swell.get.mockRejectedValue(new Error('Collection unavailable'));
+    await run(swell);
+    expect(savedStatus(swell)).toMatchObject({ message: statusMessages.connected('test'), attention: '' });
+  });
+
+  it('skips the safety net when Mollie is unreachable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network down.')));
+    const swell = swellMock(TEST_KEY);
+    await run(swell);
+    expect(swell.get).not.toHaveBeenCalled();
   });
 
   it('shows live mode for a live key', async () => {

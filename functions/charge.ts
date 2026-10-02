@@ -1,5 +1,6 @@
 import { sameAmount, toMollieAmount, type MollieAmount } from './lib/amounts';
 import { capturePayment, getPayment, isPaymentId, type MolliePaymentStatus } from './lib/mollie';
+import { markCompleted } from './lib/records';
 import { mollieSettings } from './lib/settings';
 
 export const config: SwellConfig = {
@@ -18,6 +19,7 @@ interface ChargeInput {
   transaction_id?: string;
   intent?: { mollie?: { id?: string } };
   mollie?: { token?: string };
+  order_id?: string;
 }
 
 const NOT_PAID: Partial<Record<MolliePaymentStatus, string>> = {
@@ -70,6 +72,7 @@ export default async function (req: SwellRequest) {
           )}).`,
         );
       }
+      await markCompleted(req.swell, payment.id, { orderId: input.order_id, mollieStatus: payment.status });
       return { success: true, transaction_id: payment.id };
     }
 

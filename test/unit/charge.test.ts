@@ -33,14 +33,22 @@ function mollie({ status, value = '42.50', currency = 'EUR', captureStatus = 'pe
   return { fetchMock, captures };
 }
 
-function swellMock() {
-  return { settings: vi.fn().mockResolvedValue({ mollie: { api_key: TEST_KEY } }) };
+function swellMock(record: object | null = null) {
+  return {
+    settings: vi.fn().mockResolvedValue({ mollie: { api_key: TEST_KEY } }),
+    get: vi.fn(async (url: string) => {
+      if (url === '/mollie-payments') return { results: record ? [record] : [] };
+      if (url === '/orders/order_1') return { number: '100001' };
+      return null;
+    }),
+    put: vi.fn().mockResolvedValue({}),
+  };
 }
 
 const ORDER = { amount: 42.5, currency: 'EUR', intent: { mollie: { id: PAYMENT_ID } }, mollie: { token: PAYMENT_ID } };
 
-async function charge(data: object) {
-  return handler(createMockRequest({ swell: swellMock() as unknown as SwellAPI, data }));
+async function charge(data: object, swell = swellMock()) {
+  return handler(createMockRequest({ swell: swell as unknown as SwellAPI, data }));
 }
 
 describe('charge: config', () => {
@@ -108,6 +116,51 @@ describe('charge: first call (captured: false)', () => {
       success: false,
       error: { message: 'Missing amount or currency.' },
     });
+  });
+});
+
+describe('charge: payment record', () => {
+  const NOW = new Date('2026-10-02T10:25:00.000Z').getTime();
+
+  it('marks the pending record completed with the order', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+    mollie({ status: 'paid' });
+    const swell = swellMock({ id: 'rec_1', mollie_id: PAYMENT_ID, resolution: 'pending' });
+
+    await charge({ ...ORDER, captured: false, order_id: 'order_1' }, swell);
+
+    expect(swell.put).toHaveBeenCalledWith('/mollie-payments/rec_1', {
+      resolution: 'completed',
+      mollie_status: 'paid',
+      order_id: 'order_1',
+      order_number: '#100001',
+      date_resolved: '2026-10-02T10:25:00.000Z',
+    });
+    vi.restoreAllMocks();
+  });
+
+  it('leaves records the safety net already handled', async () => {
+    mollie({ status: 'paid' });
+    const swell = swellMock({ id: 'rec_1', mollie_id: PAYMENT_ID, resolution: 'recovered' });
+    await charge({ ...ORDER, captured: false, order_id: 'order_1' }, swell);
+    expect(swell.put).not.toHaveBeenCalled();
+  });
+
+  it('still succeeds when the record cannot be updated', async () => {
+    mollie({ status: 'paid' });
+    const swell = swellMock({ id: 'rec_1', mollie_id: PAYMENT_ID, resolution: 'pending' });
+    swell.put.mockRejectedValue(new Error('Collection unavailable'));
+    await expect(charge({ ...ORDER, captured: false }, swell)).resolves.toEqual({
+      success: true,
+      transaction_id: PAYMENT_ID,
+    });
+  });
+
+  it('does not touch records on the capture call', async () => {
+    mollie({ status: 'paid' });
+    const swell = swellMock({ id: 'rec_1', mollie_id: PAYMENT_ID, resolution: 'pending' });
+    await charge({ ...ORDER, captured: true }, swell);
+    expect(swell.put).not.toHaveBeenCalled();
   });
 });
 

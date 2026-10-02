@@ -1,5 +1,6 @@
 import { toMollieAmount } from './lib/amounts';
 import { createPayment } from './lib/mollie';
+import { recordNewPayment } from './lib/records';
 import { mollieSettings, paymentDescription } from './lib/settings';
 
 export const config: SwellConfig = {
@@ -59,6 +60,14 @@ export default async function (req: SwellRequest) {
     });
 
     if (!payment.checkoutUrl) throw new Error("Mollie didn't return a payment page.");
+
+    // Remember the payment for the safety net (shoppers who pay and close the page).
+    await recordNewPayment(swell, payment, {
+      cartId: cart.id,
+      amount: total,
+      currency: cart.currency,
+      mode: settings.mode,
+    });
 
     return { result: { id: payment.id, status: payment.status, checkout_url: payment.checkoutUrl } };
   } catch (error) {

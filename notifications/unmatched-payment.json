@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.swell.store/notification.json",
+  "collection": "mollie-payments",
+  "label": "Mollie payment needs attention",
+  "description": "Sent to store admins when a shopper paid with Mollie but the app couldn't create their order.",
+  "method": "email",
+  "event": "unmatched",
+  "admin": true,
+  "subject": "Action needed: a Mollie payment of {{ amount_display }} has no order",
+  "repeat": false,
+  "sample": {
+    "mollie_id": "tr_WDqYK6vllg",
+    "amount_display": "EUR 42.50",
+    "mollie_status": "paid",
+    "resolution": "unmatched",
+    "note": "The cart changed after the shopper paid: Mollie received EUR 42.50, but the cart now totals EUR 50.00.",
+    "mollie_url": "https://my.mollie.com/dashboard/payments/tr_WDqYK6vllg",
+    "cart_id": "6abf857768b0d20012f93e55",
+    "cart": {
+      "account": { "email": "shopper@example.com", "name": "Sam Shopper" }
+    }
+  },
+  "query": {
+    "expand": ["cart.account"]
+  }
+}

@@ -71,6 +71,10 @@ export interface MolliePayment {
   method: string | null;
   metadata: Record<string, any> | null;
   checkoutUrl: string | null;
+  /** Link to the payment in the merchant's Mollie dashboard. */
+  dashboardUrl: string | null;
+  /** When the shopper paid, or authorized a hold (ISO date). */
+  paidAt: string | null;
 }
 
 export interface CreatePaymentInput {
@@ -94,6 +98,8 @@ function toPayment(body: any): MolliePayment {
     method: body.method ?? null,
     metadata: body.metadata ?? null,
     checkoutUrl: body._links?.checkout?.href ?? null,
+    dashboardUrl: body._links?.dashboard?.href ?? null,
+    paidAt: body.paidAt ?? body.authorizedAt ?? null,
   };
 }
 

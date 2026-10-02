@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.swell.store/setting.json",
   "label": "Status",
-  "description": "Updated automatically every 5 minutes.",
+  "description": "Updated automatically every 5 minutes, when the app also checks for shoppers who paid but didn't return to checkout.",
   "fields": [
     {
       "id": "message",
@@ -12,6 +12,12 @@
     {
       "id": "methods",
       "label": "Payment methods enabled in Mollie",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
+      "id": "attention",
+      "label": "Payments needing attention",
       "type": "short_text",
       "readonly": true
     },

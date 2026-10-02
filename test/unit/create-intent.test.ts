@@ -11,6 +11,7 @@ function swellMock({ cart = CART as object | null, apiKey = TEST_KEY as string |
   return {
     settings: vi.fn().mockResolvedValue(apiKey ? { mollie: { api_key: apiKey, payment_description: '' } } : {}),
     get: vi.fn().mockResolvedValue(cart),
+    post: vi.fn().mockResolvedValue({ id: 'record_1' }),
   };
 }
 
@@ -22,7 +23,10 @@ function mollieCreated(body: object = {}) {
           id: 'tr_WDqYK6vllg',
           status: 'open',
           amount: { currency: 'EUR', value: '42.50' },
-          _links: { checkout: { href: 'https://www.mollie.com/checkout/select-method/WDqYK6vllg' } },
+          _links: {
+            checkout: { href: 'https://www.mollie.com/checkout/select-method/WDqYK6vllg' },
+            dashboard: { href: 'https://my.mollie.com/dashboard/org_1/payments/tr_WDqYK6vllg' },
+          },
           ...body,
         }),
         { status: 201 },
@@ -77,6 +81,32 @@ describe('create-intent', () => {
       redirectUrl: RETURN_URL,
       metadata: { cart_id: 'cart_1', store_id: 'smpl' },
     });
+  });
+
+  it('records the payment for the safety net', async () => {
+    mollieCreated();
+    const swell = swellMock();
+    await run(swell, { cart_id: 'cart_1', redirect_url: RETURN_URL });
+
+    expect(swell.post).toHaveBeenCalledWith('/mollie-payments', {
+      mollie_id: 'tr_WDqYK6vllg',
+      mode: 'test',
+      cart_id: 'cart_1',
+      amount: 42.5,
+      currency: 'EUR',
+      mollie_status: 'open',
+      resolution: 'pending',
+      amount_display: 'EUR 42.50',
+      mollie_url: 'https://my.mollie.com/dashboard/org_1/payments/tr_WDqYK6vllg',
+    });
+  });
+
+  it('still returns the payment page when the record cannot be saved', async () => {
+    mollieCreated();
+    const swell = swellMock();
+    swell.post.mockRejectedValue(new Error('Collection unavailable'));
+    const response = await run(swell, { cart_id: 'cart_1', redirect_url: RETURN_URL });
+    expect(response).toHaveProperty('result.checkout_url');
   });
 
   it('charges the amount from the cart, not from the browser', async () => {

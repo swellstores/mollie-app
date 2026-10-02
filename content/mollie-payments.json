@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json.swell.store/content.json",
+  "collection": "mollie-payments",
+  "label": "Mollie payments",
+  "description": "Payments started with Mollie at checkout. If a shopper pays but closes the page before returning, the app creates their order within about 15 minutes. When it can't, the payment appears under Needs attention.",
+  "fields": [
+    {
+      "id": "mollie_id",
+      "label": "Mollie payment",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
+      "id": "amount_display",
+      "label": "Amount",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
+      "id": "mollie_status",
+      "label": "Mollie status",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
+      "id": "resolution",
+      "label": "Outcome",
+      "type": "select",
+      "description": "Set to Resolved once you've created the order by hand or refunded the shopper in Mollie.",
+      "options": [
+        { "label": "Waiting for payment", "value": "pending" },
+        { "label": "Paid at checkout", "value": "completed" },
+        { "label": "Order created by the app", "value": "recovered" },
+        { "label": "Needs attention", "value": "unmatched" },
+        { "label": "Resolved", "value": "resolved" },
+        { "label": "Not paid", "value": "abandoned" }
+      ]
+    },
+    {
+      "id": "order_number",
+      "label": "Order",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
+      "id": "note",
+      "label": "Note",
+      "type": "long_text",
+      "description": "Why the payment needs attention, or what you did about it."
+    },
+    {
+      "id": "mollie_url",
+      "label": "Open in Mollie",
+      "type": "url",
+      "readonly": true
+    },
+    {
+      "id": "date_created",
+      "label": "Started",
+      "type": "datetime",
+      "readonly": true
+    }
+  ],
+  "views": [
+    {
+      "id": "list",
+      "nav": {
+        "parent": "orders",
+        "label": "Mollie payments"
+      },
+      "sort": {
+        "date_created": "desc"
+      },
+      "tabs": [
+        {
+          "id": "attention",
+          "label": "Needs attention",
+          "query": { "resolution": "unmatched" }
+        },
+        {
+          "id": "all",
+          "label": "All"
+        }
+      ],
+      "fields": [
+        { "id": "date_created" },
+        { "id": "mollie_id" },
+        { "id": "amount_display" },
+        { "id": "resolution" },
+        { "id": "order_number" },
+        { "id": "note", "truncated": 60 }
+      ],
+      "actions": []
+    },
+    {
+      "id": "edit",
+      "title": "Mollie payment {{ mollie_id }}",
+      "fields": [
+        {
+          "type": "field_row",
+          "fields": [
+            { "id": "mollie_id", "admin_span": 2 },
+            { "id": "amount_display", "admin_span": 1 },
+            { "id": "mollie_status", "admin_span": 1 }
+          ]
+        },
+        {
+          "type": "field_row",
+          "fields": [
+            { "id": "resolution", "admin_span": 2 },
+            { "id": "order_number", "admin_span": 2 }
+          ]
+        },
+        { "id": "note" },
+        { "id": "mollie_url" }
+      ]
+    },
+    {
+      "id": "new",
+      "fields": [
+        {
+          "id": "mollie_id",
+          "description": "Payments are added automatically at checkout."
+        }
+      ]
+    }
+  ]
+}

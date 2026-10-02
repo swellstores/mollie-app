@@ -3,6 +3,7 @@ const MAX_LENGTH = 250;
 export interface AppStatus {
   message: string;
   methods?: string;
+  attention?: string;
 }
 
 function truncate(text: string): string {
@@ -19,6 +20,7 @@ export async function recordStatus(swell: SwellAPI, appId: string, status: AppSt
       status: {
         message: truncate(status.message),
         methods: truncate(status.methods ?? ''),
+        attention: truncate(status.attention ?? ''),
         last_checked: new Date(Date.now()).toUTCString(),
       },
     });
@@ -35,5 +37,9 @@ export const statusMessages = {
       ? 'Connected in test mode. Payments are simulated; no money is moved.'
       : 'Connected in live mode.',
   connectionFailed: (error: string) => `Couldn't reach Mollie: ${error} Trying again in 5 minutes.`,
+  attention: (count: number) =>
+    count === 0
+      ? 'None.'
+      : `${count} Mollie ${count === 1 ? 'payment needs' : 'payments need'} attention: the shopper paid but has no order. See Orders → Mollie payments.`,
   noMethods: 'None. Turn on payment methods in your Mollie dashboard: Settings → Website profiles → Payment methods.',
 };

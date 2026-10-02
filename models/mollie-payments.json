@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json.swell.store/model.json",
+  "collection": "mollie-payments",
+  "label": "Mollie payments",
+  "description": "One record per Mollie payment the app creates at checkout. The safety net uses them to find shoppers who paid but never got an order.",
+  "name_pattern": "{mollie_id}",
+  "fields": {
+    "mollie_id": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "immutable": true,
+      "description": "Mollie payment id (tr_…)"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["test", "live"],
+      "description": "Mollie mode of the API key that created the payment"
+    },
+    "cart_id": {
+      "type": "objectid",
+      "description": "Cart the payment was created for"
+    },
+    "cart": {
+      "type": "link",
+      "model": "carts",
+      "key": "cart_id"
+    },
+    "order_id": {
+      "type": "objectid",
+      "description": "Order the payment belongs to, once there is one"
+    },
+    "order": {
+      "type": "link",
+      "model": "orders",
+      "key": "order_id"
+    },
+    "amount": {
+      "type": "float",
+      "description": "Amount the shopper was asked to pay"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "mollie_status": {
+      "type": "string",
+      "description": "Last status seen on Mollie: open, pending, authorized, paid, canceled, expired or failed"
+    },
+    "resolution": {
+      "type": "string",
+      "enum": ["pending", "completed", "recovered", "unmatched", "resolved", "abandoned"],
+      "default": "pending",
+      "description": "pending: waiting for the shopper. completed: paid through checkout. recovered: the safety net created the order. unmatched: paid, but no order could be created (the merchant must act). resolved: the merchant handled it. abandoned: never paid."
+    },
+    "note": {
+      "type": "string",
+      "description": "Why a payment is unmatched, or what the merchant did about it"
+    },
+    "amount_display": {
+      "type": "string",
+      "description": "Display copy of the amount, e.g. EUR 10.00"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "Display copy of the order number"
+    },
+    "mollie_url": {
+      "type": "string",
+      "description": "Link to the payment in the Mollie dashboard"
+    },
+    "date_paid": {
+      "type": "date",
+      "description": "When the safety net first saw the payment as paid"
+    },
+    "date_resolved": {
+      "type": "date"
+    }
+  },
+  "events": {
+    "types": [
+      {
+        "id": "created"
+      },
+      {
+        "id": "updated"
+      },
+      {
+        "id": "deleted"
+      },
+      {
+        "id": "unmatched",
+        "description": "A shopper paid on Mollie but the app couldn't create their order",
+        "conditions": {
+          "$formula": "and($record.resolution != \"unmatched\", resolution == \"unmatched\")"
+        }
+      }
+    ]
+  }
+}
