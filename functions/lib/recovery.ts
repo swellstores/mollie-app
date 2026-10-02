@@ -44,10 +44,18 @@ async function update(swell: SwellAPI, record: PaymentRecord, values: Record<str
   await swell.put(`${PAYMENTS}/${record.id}`, values);
 }
 
-async function unmatched(swell: SwellAPI, record: PaymentRecord, payment: MolliePayment, note: string, orderId?: string) {
+async function unmatched(
+  swell: SwellAPI,
+  record: PaymentRecord,
+  payment: MolliePayment,
+  reason: string,
+  note: string,
+  orderId?: string,
+) {
   await update(swell, record, {
     resolution: 'unmatched',
     mollie_status: payment.status,
+    reason,
     note,
     order_id: orderId,
     order_number: await orderNumber(swell, orderId),
@@ -66,6 +74,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
     if (error instanceof MollieApiError && [400, 404, 410].includes(error.status)) {
       await update(swell, record, {
         resolution: 'abandoned',
+        reason: 'Not on Mollie',
         note: 'Not found on Mollie.',
         date_resolved: now().toISOString(),
       });
@@ -109,6 +118,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
         swell,
         record,
         payment,
+        'Order unpaid',
         `Order #${order.number} is unpaid: Mollie received ${formatAmount(payment.amount)}, the order is ${orderTotal}.`,
         cart.order_id,
       );
@@ -132,7 +142,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
   }
 
   if (!cart?.id) {
-    return unmatched(swell, record, payment, "The shopper's cart no longer exists.");
+    return unmatched(swell, record, payment, 'Cart gone', "The shopper's cart no longer exists.");
   }
 
   const total = cart.capture_total ?? cart.grand_total;
@@ -142,6 +152,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
       swell,
       record,
       payment,
+      'Cart changed',
       `Cart changed after payment: Mollie received ${formatAmount(payment.amount)}, the cart is now ${cartTotal}.`,
     );
   }
@@ -154,16 +165,17 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
     });
     order = (await swell.post('/orders', { cart_id: cart.id })) as typeof order;
   } catch (error) {
-    return unmatched(swell, record, payment, `Couldn't create the order: ${errorMessage(error)}`);
+    return unmatched(swell, record, payment, 'Order failed', `Couldn't create the order: ${errorMessage(error)}`);
   }
   if (!order?.id) {
-    return unmatched(swell, record, payment, "Couldn't create the order from the cart.");
+    return unmatched(swell, record, payment, 'Order failed', "Couldn't create the order from the cart.");
   }
   if (order.paid === false) {
     return unmatched(
       swell,
       record,
       payment,
+      'Payment not attached',
       `Order #${order.number} was created without the payment. Check it before shipping.`,
       order.id,
     );
@@ -174,6 +186,7 @@ export async function followUp(swell: SwellAPI, apiKey: string, record: PaymentR
     mollie_status: payment.status,
     order_id: order.id,
     order_number: order.number ? `#${order.number}` : undefined,
+    reason: 'Shopper left',
     note: 'The shopper left after paying; the app created the order.',
     date_resolved: now().toISOString(),
   });

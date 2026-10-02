@@ -71,6 +71,10 @@
       "type": "string",
       "description": "Why a payment is unmatched, or what the merchant did about it"
     },
+    "reason": {
+      "type": "string",
+      "description": "Short reason shown in the list (e.g. Order unpaid); the full explanation is in note"
+    },
     "amount_display": {
       "type": "string",
       "description": "Display copy of the amount, e.g. EUR 10.00"

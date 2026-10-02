@@ -107,6 +107,7 @@ describe('followUp: payments Mollie does not know', () => {
     await expect(follow(swell, record({ mollie_id: 'tr_madeup' }))).resolves.toBe('abandoned');
     expect(saved(swell)).toEqual({
       resolution: 'abandoned',
+      reason: 'Not on Mollie',
       note: 'Not found on Mollie.',
       date_resolved: '2026-10-02T12:00:00.000Z',
     });
@@ -183,6 +184,7 @@ describe('followUp: paid payments', () => {
     expect(saved(swell)).toEqual({
       resolution: 'unmatched',
       mollie_status: 'paid',
+      reason: 'Order unpaid',
       note: 'Order #100004 is unpaid: Mollie received EUR 10.00, the order is EUR 20.00.',
       order_id: 'order_4',
       order_number: '#100004',
@@ -223,6 +225,7 @@ describe('followUp: paid payments', () => {
       mollie_status: 'paid',
       order_id: 'order_2',
       order_number: '#100002',
+      reason: 'Shopper left',
       note: 'The shopper left after paying; the app created the order.',
       date_resolved: '2026-10-02T12:00:00.000Z',
     });
@@ -250,6 +253,7 @@ describe('followUp: paid payments', () => {
     expect(saved(swell)).toEqual({
       resolution: 'unmatched',
       mollie_status: 'paid',
+      reason: 'Cart changed',
       note: 'Cart changed after payment: Mollie received EUR 10.00, the cart is now EUR 15.00.',
       order_id: undefined,
       order_number: undefined,

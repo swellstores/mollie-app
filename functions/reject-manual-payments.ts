@@ -14,5 +14,5 @@ export const MANUAL_PAYMENT_NOTE = 'Added by hand. Mollie payments are added aut
  */
 export default async function (req: SwellRequest) {
   if ((req.data as { source?: string }).source === 'checkout') return;
-  return { resolution: 'abandoned', note: MANUAL_PAYMENT_NOTE };
+  return { resolution: 'abandoned', reason: 'Added by hand', note: MANUAL_PAYMENT_NOTE };
 }

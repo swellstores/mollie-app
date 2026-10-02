@@ -61,6 +61,12 @@
       "readonly": true
     },
     {
+      "id": "reason",
+      "label": "Reason",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
       "id": "note",
       "label": "Note",
       "type": "long_text",
@@ -109,40 +115,13 @@
           "id": "amount_display"
         },
         {
-          "id": "resolution",
-          "options": [
-            {
-              "label": "🟡 Waiting for payment",
-              "value": "pending"
-            },
-            {
-              "label": "🟢 Paid at checkout",
-              "value": "completed"
-            },
-            {
-              "label": "🔵 Order created by the app",
-              "value": "recovered"
-            },
-            {
-              "label": "🔴 Needs attention",
-              "value": "unmatched"
-            },
-            {
-              "label": "✅ Resolved",
-              "value": "resolved"
-            },
-            {
-              "label": "⚪ Not paid",
-              "value": "abandoned"
-            }
-          ]
+          "id": "resolution"
         },
         {
           "id": "order_number"
         },
         {
-          "id": "note",
-          "truncated": 40
+          "id": "reason"
         }
       ],
       "actions": []
@@ -176,8 +155,12 @@
               "admin_span": 2
             },
             {
+              "id": "reason",
+              "admin_span": 1
+            },
+            {
               "id": "order_number",
-              "admin_span": 2
+              "admin_span": 1
             }
           ]
         },

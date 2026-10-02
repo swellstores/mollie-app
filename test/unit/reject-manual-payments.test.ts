@@ -16,6 +16,7 @@ describe('reject-manual-payments', () => {
     async (data) => {
       await expect(handler(createMockRequest({ data }))).resolves.toEqual({
         resolution: 'abandoned',
+        reason: 'Added by hand',
         note: MANUAL_PAYMENT_NOTE,
       });
     },
