@@ -112,3 +112,24 @@ export async function getPayment(apiKey: string, id: string): Promise<MolliePaym
   }
   return toPayment(await mollieRequest(apiKey, `/payments/${id}`));
 }
+
+export interface MollieCapture {
+  id: string;
+  status: 'pending' | 'succeeded' | 'failed';
+  amount: MollieAmount;
+}
+
+/**
+ * Capture a held (authorized) payment. Without an amount, Mollie captures the full authorized amount.
+ * Captures are processed asynchronously: the result starts as pending.
+ */
+export async function capturePayment(apiKey: string, id: string, amount?: MollieAmount): Promise<MollieCapture> {
+  if (!isPaymentId(id)) {
+    throw new MollieApiError(`Not a Mollie payment id: ${id}`, 400);
+  }
+  const body = await mollieRequest(apiKey, `/payments/${id}/captures`, {
+    method: 'POST',
+    body: JSON.stringify(amount ? { amount } : {}),
+  });
+  return { id: body.id, status: body.status, amount: body.amount };
+}
