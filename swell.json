@@ -1,5 +1,5 @@
 {
-	"description": "Accept iDEAL, Bancontact, cards, Klarna and more through Mollie",
+	"description": "Accept iDEAL, Bancontact, cards and more with Mollie",
 	"id": "mollie",
 	"name": "Mollie",
 	"type": "integration",
