@@ -8,7 +8,8 @@
 		"write_carts",
 		"write_orders",
 		"read_products",
-		"read_accounts"
+		"read_accounts",
+		"write_settings"
 	],
 	"extensions": [
 		{
