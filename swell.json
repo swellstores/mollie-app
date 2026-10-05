@@ -3,7 +3,7 @@
 	"id": "mollie",
 	"name": "Mollie",
 	"type": "integration",
-	"version": "1.0.11",
+	"version": "1.0.12",
 	"permissions": [
 		"write_carts",
 		"write_orders",
