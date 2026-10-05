@@ -16,5 +16,31 @@
 			"id": "mollie",
 			"type": "payment"
 		}
+	],
+	"images": [
+		{
+			"id": "checkout",
+			"image_src": "assets/images/gallery-1.png",
+			"title": "Mollie at your Swell checkout",
+			"description": "Shoppers choose Mollie and pay with iDEAL, Bancontact, cards, PayPal and more."
+		},
+		{
+			"id": "payment-page",
+			"image_src": "assets/images/gallery-2.png",
+			"title": "Every method, one Mollie account",
+			"description": "Shoppers pay on Mollie’s secure payment page. Turn methods on or off in your Mollie dashboard."
+		},
+		{
+			"id": "safety-net",
+			"image_src": "assets/images/gallery-3.png",
+			"title": "Never miss a paid order",
+			"description": "If a shopper pays and closes the page, the app creates the order. Anything unusual is flagged and emailed to you."
+		},
+		{
+			"id": "refunds",
+			"image_src": "assets/images/gallery-4.png",
+			"title": "Refunds and status in Swell",
+			"description": "Refund in full or in part from the order page, and see your Mollie connection and methods at a glance."
+		}
 	]
 }
