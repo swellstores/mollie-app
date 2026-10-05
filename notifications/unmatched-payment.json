@@ -6,7 +6,7 @@
   "method": "email",
   "event": "unmatched",
   "admin": true,
-  "subject": "Action needed: a Mollie payment of {{ amount_display }} has no order",
+  "subject": "Action needed: a Mollie payment of {{ amount_display }} has no paid order",
   "repeat": false,
   "sample": {
     "mollie_id": "tr_WDqYK6vllg",

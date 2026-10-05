@@ -4,7 +4,12 @@
 	"name": "Mollie",
 	"type": "integration",
 	"version": "1.0.11",
-	"permissions": [],
+	"permissions": [
+		"write_carts",
+		"write_orders",
+		"read_products",
+		"read_accounts"
+	],
 	"extensions": [
 		{
 			"id": "mollie",
