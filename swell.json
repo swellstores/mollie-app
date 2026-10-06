@@ -5,7 +5,7 @@
 	"id": "mollie",
 	"name": "Mollie",
 	"type": "integration",
-	"version": "1.0.13",
+	"version": "1.0.14",
 	"permissions": [
 		"write_carts",
 		"write_orders",
