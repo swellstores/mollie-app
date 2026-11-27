@@ -1,5 +1,6 @@
 {
 	"description": "Accept iDEAL, Bancontact, cards and more with Mollie",
+	"repository_url": "https://github.com/swellstores/mollie-app",
 	"support_email": "support@swell.is",
 	"documentation_url": "https://developers.swell.is/app-guides/mollie",
 	"id": "mollie",

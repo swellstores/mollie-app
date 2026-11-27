@@ -134,3 +134,7 @@ npm test
 - **Hooks can't cancel creates:** a `before:*.created` hook's error doesn't stop the record being saved, so `reject-manual-payments` changes the record instead.
 - **Webhooks:** routes with `public: true` still need the store's secret key, so there's no Mollie webhook receiver. If Swell adds truly public routes, a webhook route (Mollie posts only `id=tr_…`; fetch the payment to verify) would replace most of the safety net's delay.
 - **CLI validation:** `swell schema <type> <file>` currently fails on every file; validate against `swell schema <type> --format=json-schema-bundle` with ajv instead.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
